@@ -1,10 +1,5 @@
-import { BrowserRouter, Route } from 'react-router-dom';
-import { createContext, useState, useEffect } from 'react';
-
-import { auth, firebase } from './services/firebase'
-
-import { Home } from './pages/Home'
-import { NewRoom } from './pages/NewRoom'
+import { createContext, ReactNode, useEffect, useState } from "react";
+import { auth, firebase } from "../services/firebase";
 
 type User = {
   id: string;
@@ -17,20 +12,24 @@ type AuthContextType = {
   signInWithGoogle: () => Promise<void>;
 }
 
-export const AuthContext = createContext({} as AuthContextType)
+type AuthContextProviderProps = {
+  children: ReactNode;
+}
 
-function App() {
+export const AuthContext = createContext({} as AuthContextType);
+
+export function AuthContextProvider(props: AuthContextProviderProps) {
   const [user, setUser] = useState<User>();
 
-  useEffect(()=> {
-   const unsubscribe = auth.onAuthStateChanged(user =>{
-      if(user){
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
         const { displayName, photoURL, uid } = user
 
         if (!displayName || !photoURL) {
-          throw new Error("Missing Information from Google Account.");
+          throw new Error('Missing information from Google Account.');
         }
-  
+
         setUser({
           id: uid,
           name: displayName,
@@ -38,21 +37,22 @@ function App() {
         })
       }
     })
+
     return () => {
       unsubscribe();
     }
   }, [])
 
-
   async function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
+
     const result = await auth.signInWithPopup(provider);
 
     if (result.user) {
       const { displayName, photoURL, uid } = result.user
 
       if (!displayName || !photoURL) {
-        throw new Error("Missing Information from Google Account.");
+        throw new Error('Missing information from Google Account.');
       }
 
       setUser({
@@ -60,19 +60,12 @@ function App() {
         name: displayName,
         avatar: photoURL
       })
-
-    };
-
+    }
   }
-  return <>
-    <BrowserRouter>
-      <AuthContext.Provider value={{ user, signInWithGoogle }}>
-        <Route path="/" exact component={Home} />
-        <Route path="/rooms/new" component={NewRoom} />
-      </AuthContext.Provider>
-    </BrowserRouter>
-
-  </>
+  
+  return (
+    <AuthContext.Provider value={{ user, signInWithGoogle }}>
+      {props.children}
+    </AuthContext.Provider>
+  );
 }
-
-export default App;
